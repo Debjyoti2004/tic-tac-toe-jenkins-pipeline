@@ -119,7 +119,7 @@ The Build & Push stage pushes the Docker image to your Docker Hub repository:
 You can verify if the Docker container is running on the deployment-target:
 ![docker-hub](./assets/test-deploy-vm.png)
 
-### Application Deployment
+## Application Deployment
 
 Before deployment, accessing the server IP shows nothing:
 
