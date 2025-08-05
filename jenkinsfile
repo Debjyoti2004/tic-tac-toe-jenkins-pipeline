@@ -4,18 +4,19 @@ pipeline {
     environment {
         IMAGE_NAME = 'my-todo-app'
         DEPLOY_SERVER_CRED_ID = 'deploy-server-private-key'
+        DOCKER_CRED_ID = 'docker-hub-cred'
     }
 
     options {
-        timeout(time: 30, unit: 'MINUTES')   
-        timestamps()                         
-        ansiColor('xterm')                  
+        timeout(time: 30, unit: 'MINUTES')
+        timestamps()
+        ansiColor('xterm') 
     }
 
     stages {
         stage('Prepare Workspace') {
             steps {
-                cleanWs()                   
+                cleanWs()
             }
         }
 
@@ -29,13 +30,13 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'docker-hub-cred',     
-                        usernameVariable: 'DOCKER_USERNAME',  
-                        passwordVariable: 'DOCKERHUB_PASS'   
+                        credentialsId: "${env.DOCKER_CRED_ID}",
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
                     )
                 ]) {
                     sh """
-                        echo "$DOCKERHUB_PASS" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
                         echo "Logged in to Docker Hub"
                     """
                 }
@@ -46,13 +47,14 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'docker-hub-cred',
+                        credentialsId: "${env.DOCKER_CRED_ID}",
                         usernameVariable: 'DOCKER_USERNAME',
-                        passwordVariable: 'DOCKERHUB_PASS'
+                        passwordVariable: 'DOCKER_PASSWORD'
                     )
                 ]) {
                     script {
                         def tag = "${env.DOCKER_USERNAME}/${env.IMAGE_NAME}:${env.BUILD_NUMBER}"
+                        env.FULL_IMAGE_TAG = tag
                         sh """
                             docker build -t ${tag} .
                             docker push ${tag}
@@ -66,16 +68,25 @@ pipeline {
         stage('SSH: Deploy to Server') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'deploy-server-ip', variable: 'DEPLOY_SERVER_IP') 
+                    string(credentialsId: 'deploy-server-ip', variable: 'DEPLOY_SERVER_IP'),
+                    sshUserPrivateKey(credentialsId: "${env.DEPLOY_SERVER_CRED_ID}", keyFileVariable: 'SSH_KEY'),
+                    usernamePassword(
+                        credentialsId: "${env.DOCKER_CRED_ID}",
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
                 ]) {
-                    sshagent(credentials: [DEPLOY_SERVER_CRED_ID]) {  
+                    script {
                         sh """
-                            ssh -o StrictHostKeyChecking=no ubuntu@${DEPLOY_SERVER_IP} '
-                                docker pull ${DOCKER_USERNAME}/${IMAGE_NAME}:${BUILD_NUMBER}
-                                docker stop ${IMAGE_NAME} || true
-                                docker rm ${IMAGE_NAME} || true
-                                docker run -d --name ${IMAGE_NAME} -p 5001:5000 ${DOCKER_USERNAME}/${IMAGE_NAME}:${BUILD_NUMBER}
-                            '
+ssh -i \$SSH_KEY -o StrictHostKeyChecking=no ubuntu@\$DEPLOY_SERVER_IP <<EOF
+docker login -u \$DOCKER_USERNAME --password-stdin <<DOCKERPASS
+\$DOCKER_PASSWORD
+DOCKERPASS
+docker pull ${env.FULL_IMAGE_TAG}
+docker stop ${env.IMAGE_NAME} || true
+docker rm ${env.IMAGE_NAME} || true
+docker run -d --name ${env.IMAGE_NAME} -p 5001:5000 ${env.FULL_IMAGE_TAG}
+EOF
                         """
                     }
                 }
@@ -85,13 +96,14 @@ pipeline {
 
     post {
         success {
-            echo "Deployment succeeded!"
+            echo "✅ Deployment succeeded!"
         }
         failure {
-            echo "Build or deployment failed!"
+            echo "❌ Build or deployment failed!"
         }
         always {
             cleanWs()
         }
     }
 }
+
