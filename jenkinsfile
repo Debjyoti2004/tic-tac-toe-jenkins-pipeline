@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'my-todo-app'
-        DEPLOY_SERVER_CRED_ID = 'deploy-server-key'
+        DEPLOY_SERVER_CRED_ID = 'deploy-server-private-key'
     }
 
     options {
