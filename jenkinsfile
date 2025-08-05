@@ -1,0 +1,97 @@
+pipeline {
+    agent { label 'build-agent' }
+
+    environment {
+        IMAGE_NAME = 'my-todo-app'
+        DEPLOY_SERVER_CRED_ID = 'deploy-server-key'
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')   
+        timestamps()                         
+        ansiColor('xterm')                  
+    }
+
+    stages {
+        stage('Prepare Workspace') {
+            steps {
+                cleanWs()                   
+            }
+        }
+
+        stage('Git: Clone Repository') {
+            steps {
+                git url: 'https://github.com/Debjyoti2004/tic-tac-toe-jenkins-pipeline.git', branch: 'master'
+            }
+        }
+
+        stage('Docker: Login to Docker') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'docker-hub-cred',     
+                        usernameVariable: 'DOCKER_USERNAME',  
+                        passwordVariable: 'DOCKERHUB_PASS'   
+                    )
+                ]) {
+                    sh """
+                        echo "$DOCKERHUB_PASS" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                        echo "Logged in to Docker Hub"
+                    """
+                }
+            }
+        }
+
+        stage('Docker: Build and Push Docker Image') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'docker-hub-cred',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKERHUB_PASS'
+                    )
+                ]) {
+                    script {
+                        def tag = "${env.DOCKER_USERNAME}/${env.IMAGE_NAME}:${env.BUILD_NUMBER}"
+                        sh """
+                            docker build -t ${tag} .
+                            docker push ${tag}
+                            echo "Pushed image to Docker Hub: ${tag}"
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('SSH: Deploy to Server') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'deploy-server-ip', variable: 'DEPLOY_SERVER_IP') 
+                ]) {
+                    sshagent(credentials: [DEPLOY_SERVER_CRED_ID]) {  
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ubuntu@${DEPLOY_SERVER_IP} '
+                                docker pull ${DOCKER_USERNAME}/${IMAGE_NAME}:${BUILD_NUMBER}
+                                docker stop ${IMAGE_NAME} || true
+                                docker rm ${IMAGE_NAME} || true
+                                docker run -d --name ${IMAGE_NAME} -p 5001:5000 ${DOCKER_USERNAME}/${IMAGE_NAME}:${BUILD_NUMBER}
+                            '
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment succeeded!"
+        }
+        failure {
+            echo "Build or deployment failed!"
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
