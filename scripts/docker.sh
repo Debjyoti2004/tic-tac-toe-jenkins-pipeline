@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # -----------------------------------------------------------------------------
-# Docker and SonarQube installation on Ubuntu
+# Docker installation on Ubuntu
 # Maintained by: Debjyoti Shit
 # Description: Script to install Docker on an EC2 instance and configure permissions.
 # -----------------------------------------------------------------------------
