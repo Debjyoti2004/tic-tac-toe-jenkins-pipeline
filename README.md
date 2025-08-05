@@ -12,28 +12,14 @@ To optimize performance and avoid overloading any single machine, we use a distr
 2.  **Jenkins Agent (Build) Node:** The workhorse. This server is responsible for resource-intensive tasks like cloning the repository, running tests, and executing `docker build` and `docker push` commands.
 3.  **Deployment Target Node:** The production stage. This server's sole purpose is to run the final application container (`docker run`), serving it to end-users. It is completely decoupled from the build process.
 
-## home page 
+## Home Page 
 ![Home](./assets/application-home-page.png)
 
-## all te vm 
+## All The VM
 ![All VM](./assets/all-vm.png)
 
-## stage view
+## Stage View
 ![stage view](./assets/jenkins-build.png)
-
-```mermaid
-graph TD
-    A[Developer] -- git push --> B(GitHub Repository);
-    B -- webhook --> C{Jenkins Master};
-    C -- delegates job --> D[Jenkins Agent (Build Node)];
-    D -- 1. git clone --> B;
-    D -- 2. docker build --> E[Docker Image];
-    D -- 3. docker push --> F(Docker Hub);
-    D -- 4. ssh deploy --> G[Deployment Target Node];
-    G -- 5. docker pull --> F;
-    G -- 6. docker run --> H{Application Container};
-    I[End User] -- accesses app --> G;
-```
 
 ## Features
 
@@ -136,10 +122,9 @@ You can verify if the Docker container is running on the deployment-target:
 ### Application Deployment
 
 Before deployment, accessing the server IP shows nothing:
-![home](./assets/before-home.png)
 
 After a successful pipeline run, the application becomes live:
-![home](./assets/application-home-page.png)
+![home](./assets/before-home.png)
 
 ### Now with Domain Name
 
