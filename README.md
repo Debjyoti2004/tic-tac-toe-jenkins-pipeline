@@ -50,11 +50,11 @@ Create a single Security Group and attach it to all three instances with the fol
 
 SSH into each server to run the appropriate installation scripts. The scripts can be found in the `/scripts` folder of this repository.
 
-#### On the jenkins-master Node:
+### On the jenkins-master Node:
 
 1. Execute the `jenkins.sh` script to set up the Jenkins Master.
 
-#### On the jenkins-agent and deployment-target Nodes:
+### On the jenkins-agent and deployment-target Nodes:
 
 1. Execute the `docker.sh` script to install Docker.
 
@@ -73,7 +73,7 @@ sudo usermod -aG docker $USER && newgrp docker
 
 ### Step 4: Jenkins Configuration
 
-#### 1. Initial Setup
+### 1. Initial Setup
 
 - Access the Jenkins UI at `http://<your-master-ip>:8080`
 - Get the initial admin password:
@@ -82,18 +82,18 @@ sudo usermod -aG docker $USER && newgrp docker
   ```
 - Install the "suggested plugins".
 
-#### 2. Add Credentials
+### 2. Add Credentials
 
 - Navigate to **Manage Jenkins > Credentials**
 - Add credentials for Docker Hub and SSH as shown below:
   ![SG](./assets/sg.png)
 
-#### 3. Configure the Build Agent
+### 3. Configure the Build Agent
 
 - Go to **Manage Jenkins > Nodes > New Node**
 - Configure the agent and make sure the Remote root directory is set properly.
 
-##### Create the root directory
+### Create the root directory
 ![node](./assets/root-jenins-node.png)
 
 After saving, the Master will connect to the agent. A successful connection will show the agent as *idle* and ready.
